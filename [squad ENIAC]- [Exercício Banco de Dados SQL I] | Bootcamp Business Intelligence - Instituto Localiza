@@ -1,3 +1,6 @@
+--[squad ENIAC]- [Exercício Banco de Dados SQL I] | Bootcamp Business Intelligence - Instituto Localiza
+-- Quem contribuiu: Alessandra, Aline, Tandara, Dayane, Elaine, Caroline, Clara
+
 -- Parte 1: DQL (Consultas Simples e Filtros) 
 
 --1. Consulta Geral: Selecione todas as informações da tabela ALUNOS. 
@@ -128,3 +131,4 @@ INNER JOIN MATRICULAS m
 GROUP BY a.ID_ALUNO, a.NOME_ALUNO
 ORDER BY "Média de Nota" DESC
 LIMIT 1;
+
