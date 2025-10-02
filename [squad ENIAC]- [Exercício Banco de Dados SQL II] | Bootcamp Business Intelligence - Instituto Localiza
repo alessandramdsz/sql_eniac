@@ -147,25 +147,25 @@ FROM total_por_cliente;
 
 
 -- 1.2 CTE recursiva meses últimos 12 meses + left join
-print("\n2) Faturamento últimos 12 meses (meses sem vendas aparecem)")
-cursor.execute('''
-WITH RECURSIVE months(m) AS (
-  SELECT date('now','start of month','-11 months')
-  UNION ALL
-  SELECT date(m, '+1 month') FROM months WHERE m < date('now','start of month')
-)
-SELECT
-  m AS mes_inicio,
-  IFNULL(SUM(o.valor_total), 0) AS faturamento_mes
-FROM months
-LEFT JOIN orders o
-  ON date(o.dt_pedido,'start of month') = m
-  AND o.status <> 'Cancelado'
-GROUP BY m
-ORDER BY m;
-''')
-for row in cursor.fetchall():
-    print(row)
+ print("\n2) Faturamento últimos 12 meses (meses sem vendas aparecem)")
+ cursor.execute('''
+ WITH RECURSIVE months(m) AS (
+   SELECT date('now','start of month','-11 months')
+   UNION ALL
+   SELECT date(m, '+1 month') FROM months WHERE m < date('now','start of month')
+ )
+ SELECT
+   m AS mes_inicio,
+   IFNULL(SUM(o.valor_total), 0) AS faturamento_mes
+ FROM months
+ LEFT JOIN orders o
+   ON date(o.dt_pedido,'start of month') = m
+   AND o.status <> 'Cancelado'
+ GROUP BY m
+ ORDER BY m;
+ ''')
+ for row in cursor.fetchall():
+     print(row)
 
 -- 2.1 Para cada cliente, mostre o valor do pedido e o rank dos pedidos (maior → menor)
 
