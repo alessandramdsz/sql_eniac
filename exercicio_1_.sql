@@ -29,11 +29,10 @@ WHERE DATA_INGRESSO >= '2023-01- 01'
 --Liste o nome e a nota final de todas as matrículas do aluno de ID_ALUNO = 1 E cuja NOTA_FINAL foi maior ou igual a 7.0. 
 -- Ordene o resultado pela nota, da maior para a menor. 
 SELECT NOME_ALUNO AS "Nome do Aluno",
-	   NOTA_FINAL AS "Nota Final"
+       NOTA_FINAL AS "Nota Final"
 FROM ALUNOS a, MATRICULAS m
 WHERE a.ID_ALUNO == 1 AND m.NOTA_FINAL >= 7.0
 ORDER BY NOTA_FINAL DESC;
-
 
 -----------------------------------------------------------------------------------------------------
 
@@ -130,4 +129,5 @@ INNER JOIN MATRICULAS m
 GROUP BY A.ID_ALUNO 
 ORDER BY AVG(m.NOTA_FINAL) DESC
 LIMIT 1
+
 
