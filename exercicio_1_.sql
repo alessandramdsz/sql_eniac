@@ -31,7 +31,7 @@ WHERE DATA_INGRESSO >= '2023-01- 01'
 SELECT NOME_ALUNO AS "Nome do Aluno",
        NOTA_FINAL AS "Nota Final"
 FROM ALUNOS a, MATRICULAS m
-WHERE a.ID_ALUNO == 1 AND m.NOTA_FINAL >= 7.0
+WHERE a.ID_ALUNO = 1 AND m.NOTA_FINAL >= 7.0
 ORDER BY NOTA_FINAL DESC;
 
 -----------------------------------------------------------------------------------------------------
@@ -129,5 +129,6 @@ INNER JOIN MATRICULAS m
 GROUP BY A.ID_ALUNO 
 ORDER BY AVG(m.NOTA_FINAL) DESC
 LIMIT 1
+
 
 
