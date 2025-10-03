@@ -1,39 +1,56 @@
--- Pessoas que cocntribuiram na atividade: Alessandra, Aline, Caroline, Clara, Dayane, Elaine, Tandara
+-- Pessoas que contribuiram na atividade: Alessandra, Aline, Caroline, Clara, Dayane, Elaine, Tandara
+
+-- Ativar foreign keys (SQLite)
+PRAGMA foreign_keys = ON;
+
+-- Criar tabelas
 
 -- Clientes
-CREATE TABLE customers (
- customer_id INTEGER PRIMARY KEY,
- nome TEXT NOT NULL,
- email TEXT UNIQUE,
- dt_cadastro DATE
+CREATE TABLE IF NOT EXISTS customers (
+  customer_id INTEGER PRIMARY KEY,
+  nome TEXT NOT NULL,
+  email TEXT UNIQUE,
+  dt_cadastro DATE
 );
+
 -- Pedidos
-CREATE TABLE orders (
- order_id INTEGER PRIMARY KEY,
- customer_id INTEGER,
- dt_pedido DATE,
- valor_total DECIMAL(10,2),
- status TEXT CHECK(status IN ('Pendente','Pago','Cancelado')),
- FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
+CREATE TABLE IF NOT EXISTS orders (
+  order_id INTEGER PRIMARY KEY,
+  customer_id INTEGER,
+  dt_pedido DATE,
+  valor_total DECIMAL(10,2),
+  status TEXT CHECK(status IN ('Pendente','Pago','Cancelado')),
+  FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
 );
+
 -- Produtos
-CREATE TABLE products (
- product_id INTEGER PRIMARY KEY,
- nome TEXT NOT NULL,
- preco DECIMAL(10,2),
- categoria TEXT
+CREATE TABLE IF NOT EXISTS products (
+  product_id INTEGER PRIMARY KEY,
+  nome TEXT NOT NULL,
+  preco DECIMAL(10,2),
+  categoria TEXT
 );
+
 -- Itens do Pedido
-CREATE TABLE order_items (
- order_item_id INTEGER PRIMARY KEY,
- order_id INTEGER,
- product_id INTEGER,
- quantidade INTEGER,
- preco_unitario DECIMAL(10,2),
- FOREIGN KEY (order_id) REFERENCES orders(order_id),
- FOREIGN KEY (product_id) REFERENCES products(product_id)
+CREATE TABLE IF NOT EXISTS order_items (
+  order_item_id INTEGER PRIMARY KEY,
+  order_id INTEGER,
+  product_id INTEGER,
+  quantidade INTEGER,
+  preco_unitario DECIMAL(10,2),
+  FOREIGN KEY (order_id) REFERENCES orders(order_id),
+  FOREIGN KEY (product_id) REFERENCES products(product_id)
 );
--- 1. Clientes
+
+-- Limpar tabelas para evitar duplicação
+DELETE FROM order_items;
+DELETE FROM orders;
+DELETE FROM products;
+DELETE FROM customers;
+
+-- Inserindo os dados das tabelas
+
+-- Clientes
 INSERT INTO customers (customer_id, nome, email, dt_cadastro) VALUES
 (6, 'Mariana Costa', 'mariana@gmail.com', '2024-03-12'),
 (7, 'Ricardo Almeida', 'ricardo@uol.com', '2024-06-05'),
@@ -45,7 +62,8 @@ INSERT INTO customers (customer_id, nome, email, dt_cadastro) VALUES
 (3, 'Carlos Lima', 'carlos@hotmail.com', '2024-03-05'),
 (4, 'Beatriz Oliveira', 'bia@outlook.com', '2024-04-20'),
 (5, 'Pedro Santos', 'pedro@gmail.com', '2024-05-01');
--- 2. Produtos
+
+-- Produtos
 INSERT INTO products (product_id, nome, preco, categoria) VALUES
 (1, 'Notebook Lenovo', 3500.00, 'Eletrônicos'),
 (2, 'Smartphone Samsung', 2500.00, 'Eletrônicos'),
@@ -63,7 +81,8 @@ INSERT INTO products (product_id, nome, preco, categoria) VALUES
 (14, 'Tênis Adidas', 380.00, 'Roupas'),
 (15, 'Smartwatch Garmin', 2200.00, 'Eletrônicos'),
 (16, 'Aspirador de Pó', 600.00, 'Casa');
---3. Pedidos
+
+-- Pedidos
 INSERT INTO orders (order_id, customer_id, dt_pedido, valor_total, status) VALUES
 (101, 1, '2024-06-01', 3620.00, 'Pago'),
 (102, 1, '2024-07-10', 120.00, 'Pago'),
@@ -84,7 +103,8 @@ INSERT INTO orders (order_id, customer_id, dt_pedido, valor_total, status) VALUE
 (117, 9, '2024-09-22', 600.00, 'Pago'),
 (118, 10, '2024-09-25', 0.00, 'Cancelado'),
 (119, 10, '2024-09-28', 350.00, 'Pendente');
--- 4. Itens dos Pedidos
+
+-- Itens dos Pedidos
 INSERT INTO order_items (order_item_id, order_id, product_id, quantidade,
 preco_unitario) VALUES
 -- Pedido 101 (João)
@@ -129,24 +149,31 @@ preco_unitario) VALUES
 -- Pedido 119 (Juliana - pendente)
 (1022, 119, 7, 1, 350.00);
 
+-- DESAFIOS ABAIXO
 
 -- 1.1 Liste o valor médio gasto por cliente usando uma CTE
+
 WITH total_por_cliente AS (
-    SELECT 
-        c.customer_id,
-        c.nome,
-        SUM(o.valor_total) AS total_gasto
-    FROM customers c
-    JOIN orders o ON c.customer_id = o.customer_id
-    WHERE o.status = 'Pago'
-    GROUP BY c.customer_id, c.nome
+  SELECT 
+    c.customer_id,
+    c.nome,
+    COALESCE(SUM(o.valor_total), 0) AS total_gasto
+  FROM customers c
+  LEFT JOIN orders o
+    ON c.customer_id = o.customer_id
+    AND o.status = 'Pago'
+  GROUP BY c.customer_id, c.nome
+),
+media_geral AS (
+  SELECT ROUND(AVG(total_gasto),2) AS valor_medio_geral
+  FROM total_por_cliente
 )
 SELECT 
-    nome,
-    total_gasto,
-    ROUND(AVG(total_gasto) OVER(), 2) AS valor_medio_geral
-FROM total_por_cliente;
-
+  t.nome,
+  t.total_gasto,
+  m.valor_medio_geral
+FROM total_por_cliente t
+CROSS JOIN media_geral m;
 
 -- 1.2 CTE recursiva meses últimos 12 meses + left join
 
@@ -156,26 +183,27 @@ FROM total_por_cliente;
   SELECT date(m, '+1 month') FROM months WHERE m < date('now','start of month')
 )
 SELECT
-  m AS mes_inicio,
-  IFNULL(SUM(o.valor_total), 0) AS faturamento_mes
+  strftime('%Y-%m', m) AS ano_mes,
+  COALESCE(SUM(o.valor_total), 0) AS faturamento_mes
 FROM months
 LEFT JOIN orders o
-  ON date(o.dt_pedido,'start of month') = m
+  ON strftime('%Y-%m', o.dt_pedido) = strftime('%Y-%m', m)
   AND o.status <> 'Cancelado'
-GROUP BY m
-ORDER BY m;
+GROUP BY ano_mes
+ORDER BY ano_mes;
 
 -- 2.1 Para cada cliente, mostre o valor do pedido e o rank dos pedidos (maior → menor)
 
-SELECT c.CUSTOMER_ID AS "Id do cliente",
-       c.NOME AS "Nome do Cliente",
-       o.ORDER_ID "Id do pedido",
-       o.VALOR_TOTAL AS "Valor total",
-       RANK() OVER (PARTITION BY c.CUSTOMER_ID ORDER BY o.VALOR_TOTAL DESC) AS "Rank de pedidos por cliente"
-FROM CUSTOMERS c
-JOIN ORDERS o ON c.CUSTOMER_ID = o.CUSTOMER_ID
-ORDER BY c.CUSTOMER_ID,
-         "Rank de pedidos por cliente";
+SELECT 
+  c.customer_id AS id_cliente,
+  c.nome,
+  o.order_id,
+  o.valor_total,
+DENSE_RANK() OVER (PARTITION BY c.customer_id ORDER BY o.valor_total DESC) AS rank_pedido
+FROM customers c
+JOIN orders o ON c.customer_id = o.customer_id
+WHERE o.status <> 'Cancelado'
+ORDER BY c.customer_id, rank_pedido;
 
 -- 2.2 Calcule a média móvel de 3 pedidos para cada cliente
 
@@ -214,13 +242,13 @@ JOIN orders o ON c.customer_id = o.customer_id;
 
 -- 3.1 Crie uma View que mostre o faturamento diário consolidado
 
-CREATE VIEW "Faturamento Diario Consolidado" AS
-SELECT DT_PEDIDO AS "Data do faturamento",
-       SUM(VALOR_TOTAL) AS "Faturamento por dia"
-FROM ORDERS
-WHERE STATUS = 'Pago'
-GROUP BY DT_PEDIDO
-ORDER BY DT_PEDIDO;
+CREATE VIEW faturamento_diario AS
+SELECT dt_pedido AS data_faturamento,
+       SUM(valor_total) AS faturamento_total,
+       COUNT(*) AS qtd_pedidos
+FROM orders
+WHERE status = 'Pago'
+GROUP BY dt_pedido;
 
 -- 3.2 Crie uma Tabela temporária com os clientes que fizeram compras nos últimos 30
 dias
@@ -248,31 +276,26 @@ NOT EXISTS
 compraram da categoria "Eletrônicos", mas nunca da categoria "Roupas")
 
 WITH categorias_cliente AS (
-    SELECT 
-        c.customer_id,
-        c.nome,
-        p.categoria
-    FROM customers c
-    JOIN orders o ON c.customer_id = o.customer_id
-    JOIN order_items oi ON o.order_id = oi.order_id
-    JOIN products p ON oi.product_id = p.product_id
-    WHERE o.status = 'Pago'
-    GROUP BY c.customer_id, p.categoria
-)
-SELECT 
+  SELECT 
     c.customer_id,
     c.nome,
-    GROUP_CONCAT(c.categoria) AS categorias_compradas
-FROM categorias_cliente c
-GROUP BY c.customer_id, c.nome
-HAVING 
-   -- Comprou Eletrônicos mas nunca Roupas
-   (SUM(CASE WHEN categoria = 'Eletrônicos' THEN 1 ELSE 0 END) > 0
-    AND SUM(CASE WHEN categoria = 'Roupas' THEN 1 ELSE 0 END) = 0)
-   OR
-   -- Comprou Roupas mas nunca Eletrônicos
-   (SUM(CASE WHEN categoria = 'Roupas' THEN 1 ELSE 0 END) > 0
-    AND SUM(CASE WHEN categoria = 'Eletrônicos' THEN 1 ELSE 0 END) = 0);
+    p.categoria
+  FROM customers c
+  JOIN orders o ON c.customer_id = o.customer_id AND o.status = 'Pago'
+  JOIN order_items oi ON o.order_id = oi.order_id
+  JOIN products p ON oi.product_id = p.product_id
+  GROUP BY c.customer_id, c.nome, p.categoria
+)
+SELECT 
+  customer_id,
+  nome,
+  GROUP_CONCAT(categoria) AS categorias_compradas,
+  SUM(CASE WHEN categoria = 'Eletrônicos' THEN 1 ELSE 0 END) AS qtd_electronicos,
+  SUM(CASE WHEN categoria = 'Roupas' THEN 1 ELSE 0 END) AS qtd_roupas
+FROM categorias_cliente
+GROUP BY customer_id, nome
+HAVING (qtd_electronicos > 0 AND qtd_roupas = 0)
+   OR (qtd_roupas > 0 AND qtd_electronicos = 0);
 
 -- 5.1 Mostre apenas o domínio do e-mail dos clientes (parte depois do @)
 
@@ -295,10 +318,10 @@ FROM customers;
 (ex.: "João - Pedido 123")
 
 SELECT 
-    c.customer_id,
-    c.nome,
-    o.order_id,
-    c.nome || ' - Pedido ' || o.order_id AS cliente_pedido
+  c.customer_id,
+  c.nome,
+  o.order_id,
+  c.nome || ' - Pedido ' || o.order_id AS cliente_pedido
 FROM customers c
 JOIN orders o ON c.customer_id = o.customer_id
 ORDER BY c.nome, o.order_id;
@@ -316,20 +339,20 @@ ORDER BY ano_cadastro;
 -- 6.2 Calcular quantos dias se passaram desde o pedido
 
 SELECT 
-    order_id,
-    customer_id,
-    dt_pedido,
-    ROUND(julianday('now') - julianday(dt_pedido)) AS dias_desde_pedido
+  order_id,
+  customer_id,
+  dt_pedido,
+  ROUND(julianday('now') - julianday(dt_pedido)) AS dias_desde_pedido
 FROM orders
 ORDER BY dias_desde_pedido DESC;
 
 -- 6.3 Adicionar 7 dias à data do pedido (ex.: prazo de entrega)
 
 SELECT 
-    order_id,
-    customer_id,
-    dt_pedido,
-    DATE(dt_pedido, '+7 days') AS prazo_entrega
+  order_id,
+  customer_id,
+  dt_pedido,
+  DATE(dt_pedido, '+7 days') AS prazo_entrega
 FROM orders
 ORDER BY dt_pedido;
 
@@ -339,17 +362,36 @@ usado
 CREATE INDEX idx_orders_customer_date
 ON orders (customer_id, dt_pedido);
 
+-- Este índice será usado sempre que precisarmos fazer consultas que filtram ou ordenam pela combinação customer_id e dt_pedido, como:
+-- Filtro por cliente e período
+
+SELECT * FROM orders
+WHERE customer_id = 3 AND dt_pedido >= '2024-07-01';
+
+-- Junção com clientes
+
+SELECT c.nome, o.valor_total
+FROM customers c
+JOIN orders o ON c.customer_id = o.customer_id;
+
 -- 7.2 Compare uma query que faz JOIN com EXISTS E analise qual é mais performática
 
-SELECT c.customer_id, c.nome
-FROM customers c
-WHERE EXISTS (
-    SELECT 1
-    FROM orders o
-    WHERE o.customer_id = c.customer_id);
+SELECT 
+    c.customer_id,
+    c.nome
+FROM 
+    customers c
+WHERE 
+    EXISTS (
+        SELECT 1
+        FROM orders o
+        WHERE o.customer_id = c.customer_id
+    );
 
  -- 7.3 Identifique consultas que podem ser reescritas usando CTE materializada para
 melhorar a performance
+
+-- 7.3 Consultas que podem se beneficiar de CTE materializada
 
 WITH pedidos_por_cliente AS (
     SELECT 
@@ -364,13 +406,13 @@ WITH pedidos_por_cliente AS (
 SELECT 
     c.customer_id,
     c.nome,
-    p.total_gasto,
-    p.qtd_pedidos,
-    p.ticket_medio
+    COALESCE(p.total_gasto, 0) AS total_gasto,
+    COALESCE(p.qtd_pedidos, 0) AS qtd_pedidos,
+    ROUND(COALESCE(p.ticket_medio, 0), 2) AS ticket_medio
 FROM customers c
-LEFT JOIN pedidos_por_cliente p
+LEFT JOIN pedidos_por_cliente p 
     ON c.customer_id = p.customer_id
-ORDER BY p.total_gasto DESC;
+ORDER BY total_gasto DESC;
 
  -- 8.1 Use CASE WHEN para classificar pedidos em: "Baixo" (<100), "Médio" (100-500),
 "Alto" (>500)
@@ -389,26 +431,26 @@ ORDER BY VALOR_TOTAL DESC;
 meses) ou Inativo
 
  SELECT 
-    c.customer_id,
-    c.nome,
-    MAX(o.dt_pedido) AS ultima_compra,
-    CASE 
-        WHEN julianday('now') - julianday(MAX(o.dt_pedido)) <= 180 
-            THEN 'Ativo'
-        ELSE 'Inativo'
-    END AS status_cliente
+ c.customer_id,
+ c.nome,
+ MAX(o.dt_pedido) AS ultima_compra,
+ CASE 
+   WHEN julianday('now') - julianday(MAX(o.dt_pedido)) <= 180 THEN 'Ativo'
+   ELSE 'Inativo'
+   END AS status_cliente
 FROM customers c
-LEFT JOIN orders o ON c.customer_id = o.customer_id
-WHERE o.status = 'Pago'
+LEFT JOIN orders o
+  ON c.customer_id = o.customer_id
+  AND o.status = 'Pago'
 GROUP BY c.customer_id, c.nome;
 
 -- 8.3 Em um relatório de pedidos, mostre NULL como "Sem valor informado".
 
 SELECT 
-    o.order_id,
-    c.nome AS cliente,
-    COALESCE(o.dt_pedido, 'Sem valor informado') AS data_pedido,
-    COALESCE(o.valor_total, 'Sem valor informado') AS valor_total,
-    COALESCE(o.status, 'Sem valor informado') AS status
+  o.order_id,
+  c.nome AS cliente,
+  COALESCE(CAST(o.dt_pedido AS TEXT), 'Sem valor informado') AS data_pedido,
+  COALESCE(CAST(o.valor_total AS TEXT), 'Sem valor informado') AS valor_total,
+  COALESCE(o.status, 'Sem valor informado') AS status
 FROM orders o
 LEFT JOIN customers c ON o.customer_id = c.customer_id;
