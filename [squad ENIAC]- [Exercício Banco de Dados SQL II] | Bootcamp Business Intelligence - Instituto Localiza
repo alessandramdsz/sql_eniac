@@ -299,6 +299,7 @@ WHERE NOT EXISTS (
           WHERE o.customer_id = c.customer_id
             AND o.status = 'Pago'
             AND oi.product_id = p.product_id
+          )
 );
 
 -- 4.3 Monte um relatório de clientes que compraram um produto, mas nunca outro (ex.:
