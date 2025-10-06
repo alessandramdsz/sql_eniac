@@ -269,8 +269,37 @@ WHERE
 
 -- 4.1 Liste todos os produtos e indique se foram ou não vendidos (LEFT JOIN)
 
+SELECT
+  p.nome,
+CASE
+WHEN oi.order_item_id IS NULL THEN 'Não Vendido'
+ELSE 'Vendido'
+END AS status_venda
+FROM products p
+LEFT JOIN order_items oi
+ON p.product_id = oi.product_id
+GROUP BY
+  p.product_id;
+
 -- 4.2 Traga os clientes que compraram todos os produtos de uma categoria (pode usar
 NOT EXISTS
+
+SELECT c.customer_id, c.nome
+FROM customers c
+WHERE NOT EXISTS (
+ 
+    SELECT 1
+    FROM products p
+    WHERE p.categoria = 'Roupas'
+      AND NOT EXISTS (
+
+          SELECT 1
+          FROM orders o
+          JOIN order_items oi ON o.order_id = oi.order_id
+          WHERE o.customer_id = c.customer_id
+            AND o.status = 'Pago'
+            AND oi.product_id = p.product_id
+);
 
 -- 4.3 Monte um relatório de clientes que compraram um produto, mas nunca outro (ex.:
 compraram da categoria "Eletrônicos", mas nunca da categoria "Roupas")
@@ -390,8 +419,6 @@ WHERE
 
  -- 7.3 Identifique consultas que podem ser reescritas usando CTE materializada para
 melhorar a performance
-
--- 7.3 Consultas que podem se beneficiar de CTE materializada
 
 WITH pedidos_por_cliente AS (
     SELECT 
